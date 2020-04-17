@@ -1,4 +1,4 @@
-# TPM based Secret Sharing with on Google Compute Engine
+# TPM based Secret Sharing with Google Compute Engine
 
 Symmetric and Asymmetric Key Distribution server using [Trusted Platform Module](https://en.wikipedia.org/wiki/Trusted_Platform_Module).
 
