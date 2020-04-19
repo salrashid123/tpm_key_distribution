@@ -79,6 +79,10 @@ do one of:
 
 At this point, the server transferred an RSA private key or an arbitrary key to the client in a way that ensures the client was confirmed to be in a specific state.
 
+>> **NOTE**: The flow here generates the private key by the broker and then distributes that key to the remote TPM.  The inverse flow where the private key is generated _on the remote TPM_ and then signed by the verification service (i.,e server), is not possible at the moment.  As of 4/18/20, `go-tpm` does not support AK based signing.   This flow is superior in many ways because the private key never leaves a target TPM ever (i.,e its not generated elsewhere and transferred; it always existed on that TPM).  For more information on AK based signing feature, see:
+
+- `Attestation Key based signing`: [go-tpm issue/101#](https://github.com/google/go-tpm/issues/101#issuecomment-613753202)
+
 
 `Quote-Verify`:
 
