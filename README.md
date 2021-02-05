@@ -217,17 +217,22 @@ on the server, start the grpc service.  Instruct it to seal against `pcr=0` on t
 
 Note, that PCR value is the default PCR=0 value for a Google Compute Shielded VM
 
+
+The following will start the gRPC Server and will seal and transfer an AES key to the client
+
 ```log
 gcloud compute ssh server
 
-$ go run src/grpc_server.go 
+$ go run src/grpc_server.go \
    --grpcport :50051 -pcr 0 \
    -secret bar \
+   -aes256Key "G-KaPdSgUkXp2s5v8y/B?E(H+MbQeThW" \
    -expectedPCRValue fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe \
    --importMode=AES \
    --cacert  certs/CA_crt.pem  \
    --servercert certs/server_crt.pem \
    --serverkey certs/server_key.pem \
+   --usemTLS \
    --v=10 -alsologtostderr 
 
       I0205 00:23:20.492011    3254 grpc_server.go:287] Starting gRPC server on port :50051
@@ -346,6 +351,7 @@ $ go run src/grpc_client.go \
   --cacert certs/CA_crt.pem \
   --clientcert certs/client_crt.pem \
   --clientkey certs/client_key.pem \
+  --usemTLS \
   --v=10 -alsologtostderr
 
 
@@ -439,10 +445,10 @@ $ go run src/grpc_client.go \
 Note the line on the client:
 
 ```bash
-I0417 20:12:35.468049    2824 grpc_client.go:269]      Unsealed Secret G-KaPdSgUkXp2s5v8y/B?E(H+MbQeThW
+    I0205 00:23:27.110051    3827 grpc_client.go:268]      Unsealed Secret G-KaPdSgUkXp2s5v8y/B?E(H+MbQeThW
 ```
 
-What just happened is a symmetric key was transferred and decoded on the client using the TPM
+What just happened is a symmetric key was transferred and decoded on the client using the TPM (we originally set the symmetric key to transfer on the grpc_server by setting the argument)
 
 
 ### RSA mode
@@ -463,6 +469,7 @@ $ go run src/grpc_server.go \
    --cackey certs/CA_key.pem \
    --servercert certs/server_crt.pem \
    --serverkey certs/server_key.pem \
+   --usemTLS \
    --v=10 -alsologtostderr 
 
 
@@ -587,6 +594,7 @@ $ go run src/grpc_client.go \
   --cacert certs/CA_crt.pem  \
   --clientcert certs/client_crt.pem \
   --clientkey certs/client_key.pem \
+  --usemTLS \
   --v=10 -alsologtostderr 
 
 
