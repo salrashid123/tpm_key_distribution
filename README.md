@@ -695,8 +695,8 @@ $ go run src/grpc_client.go \
 Note the signatures on both the client and server match for a for the signature of a sample control string ("secret")
 
 
-```bash
-I0417 20:14:31.896706    3068 grpc_server.go:713]      Test signature data:  UGS+ASkuFl1ve5Df6jad4dNEZHMXeYu9PonGGzqtD7dOWQQiCk3R4doQXhxN6Ee61of86d0FODzfaEBaKSFBF0yDc9eq26zuTZG6XvgQVB8e8V4MgfRxO5go1iGEyn+R/G1XpmXZpnDGJFN14sXzejOcLXSkSQByrZL2KSdVb600PQMKmkEnQ5qSlR8hSKo5FNUU/sOEVtqbRHeeBLo697pEB14PnMosmlYL1Ve5Qkh5wFPAZ+2ePpk3C+2+9epA5dgsHwVLdoavSLI2nAp+xMJLm4h8IG7aA1RuyXiZpAwQw2md2QrPvR8r1xlEonTYgvVxmd75/wgTYSSd8x+FlQ
+```log
+    I0205 01:09:56.055133    3944 grpc_server.go:713]      Test signature data:  jJ4bcxBnRmHKWdo7T5x3gGqtAZBdS4axPOdpoS0hBQbVDXY2Bnn5RVilm7oqy+9p/W0FXx/aZxifv/4xySSqShjTnkDR32QLx2eLywoftbfh8zv99po1XKfTw2Nq3cgIOVe9rNEYTkV2bfNyKWlpEJnm1U1b2lPrpaLMWJ6HBsrb3/Y7n5hF9EfQwSx7BK1n3rFZSchlblTs+JBIAaTGYbRnskYIWJCZihhh1661ignJAOw+WQDulGwrxMtJqsnKW2ctnCw2S41Hfu+YoFZi4T/6cHFk/o0I3oqXu0jQW/mdqN1bWkp0Rr2bi6WWJhAmPdibcBni+MiH6hNJl1ww2g
 
 ---
 
