@@ -315,7 +315,7 @@ func importKey(ar pb.ActivateCredentialResponse) (secret string, err error) {
 	if err != nil {
 		glog.Fatal("Error Unmarshalling ImportBlob error: ", err)
 	}
-	myDecodedSecret, err := ek.Import(rwc, blob)
+	myDecodedSecret, err := ek.Import(blob)
 	if err != nil {
 		glog.Fatalf("Unable to Import sealed data: %v", err)
 	}
@@ -410,7 +410,7 @@ func importRSAKey(ar pb.ActivateCredentialResponse) (err error) {
 	if err = tpm2.PolicyPCR(rwc, session, nil, tpm2.PCRSelection{tpm2.AlgSHA256, []int{*pcr}}); err != nil {
 		glog.Fatalf("PolicyPCR failed: %v", err)
 	}
-	sig, err := tpm2.SignWithSession(rwc, session, pH, emptyPassword, digest[:], &tpm2.SigScheme{
+	sig, err := tpm2.SignWithSession(rwc, session, pH, emptyPassword, digest[:], nil, &tpm2.SigScheme{
 		Alg:  tpm2.AlgRSASSA,
 		Hash: tpm2.AlgSHA256,
 	})
