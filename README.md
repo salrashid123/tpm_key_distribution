@@ -464,6 +464,7 @@ $ go run src/grpc_server.go \
    --grpcport :50051 \
    -pcr 0 \
    -expectedPCRValue fcecb56acc303862b30eb342c4990beb50b5e0ab89722449c2d9a73f37b019fe \
+   --secret bar \
    --importMode=RSA \
    --cacert  certs/CA_crt.pem \
    --cackey certs/CA_key.pem \
