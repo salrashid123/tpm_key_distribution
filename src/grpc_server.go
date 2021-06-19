@@ -64,7 +64,7 @@ import (
 var (
 	grpcport         = flag.String("grpcport", "", "grpcport")
 	secret           = flag.String("secret", "foo", "secret")
-	expectedPCRValue = flag.String("expectedPCRValue", "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b", "expectedPCRValue")
+	expectedPCRValue = flag.String("expectedPCRValue", "24af52a4f429b71a3184a6d64cddad17e54ea030e2aa6576bf3a5a3d8bd3328f", "expectedPCRValue")
 	pcr              = flag.Int("pcr", 23, "PCR Value to use")
 	caCert           = flag.String("cacert", "CA_crt.pem", "CA Certificate to issue certs")
 	caKey            = flag.String("cackey", "CA_key.pem", "CA PrivateKey to issue certs")
