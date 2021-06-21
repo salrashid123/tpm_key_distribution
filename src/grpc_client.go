@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -29,6 +30,8 @@ import (
 	"log"
 	"time"
 	pb "verifier"
+
+	certparser "certparser"
 
 	"github.com/golang/glog"
 	"github.com/google/go-tpm-tools/tpm2tools"
@@ -54,6 +57,10 @@ const (
 	akPubFile          = "akPub.bin"
 	akPrivFile         = "akPriv.bin"
 	ekFile             = "ek.bin"
+
+	signCertNVIndex       = 0x01c10000
+	signKeyNVIndex        = 0x01c10001
+	encryptionCertNVIndex = 0x01c00002
 )
 
 var (
@@ -62,9 +69,10 @@ var (
 	pcr        = flag.Int("unsealPcr", 23, "pcr value to unseal against")
 	caCert     = flag.String("cacert", "CA_crt.pem", "CA Certificate to trust")
 
-	clientCert = flag.String("clientcert", "client_crt.pem", "Client SSL Certificate")
-	clientKey  = flag.String("clientkey", "client_key.pem", "Client SSL PrivateKey")
-	usemTLS    = flag.Bool("usemTLS", false, "Validate original client request with mTLS")
+	clientCert      = flag.String("clientcert", "client_crt.pem", "Client SSL Certificate")
+	clientKey       = flag.String("clientkey", "client_key.pem", "Client SSL PrivateKey")
+	usemTLS         = flag.Bool("usemTLS", false, "Validate original client request with mTLS")
+	readCertsFromNV = flag.Bool("readCertsFromNV", false, "Try to read read certificates from NV")
 
 	handleNames = map[string][]tpm2.HandleType{
 		"all":       []tpm2.HandleType{tpm2.HandleTypeLoadedSession, tpm2.HandleTypeSavedSession, tpm2.HandleTypeTransient},
@@ -210,6 +218,111 @@ func main() {
 	}
 	glog.V(2).Infof("RPC HealthChekStatus:%v", resp.GetStatus())
 
+	// Try to read the AK/EK Certificates
+	// currently this code is not used since the NV based EK certs are not available on GCE
+
+	if *readCertsFromNV {
+
+		// First acquire the AK, EK keys, certificates from NV
+
+		glog.V(5).Infof("=============== Load EncryptionKey and Certifcate from NV ===============")
+		ekk, err := tpm2tools.EndorsementKeyRSA(rwc)
+		if err != nil {
+			glog.Errorf("ERROR:  could not get EndorsementKeyRSA: %v", err)
+			return
+		}
+		epubKey := ekk.PublicKey().(*rsa.PublicKey)
+		ekBytes, err := x509.MarshalPKIXPublicKey(epubKey)
+		if err != nil {
+			glog.Errorf("ERROR:  could not get MarshalPKIXPublicKey: %v", err)
+			return
+		}
+		ekPubPEM := pem.EncodeToMemory(
+			&pem.Block{
+				Type:  "PUBLIC KEY",
+				Bytes: ekBytes,
+			},
+		)
+		glog.V(10).Infof("     Encryption PEM \n%s", string(ekPubPEM))
+		ekk.Close()
+
+		// now reread the EKCert directly from NV
+		//   the EKCertificate (x509) is saved at encryptionCertNVIndex
+		//   the following steps attempts to read that value in directly from NV
+		//   This is currently not supported but i'm adding in code anyway
+
+		ekcertBytes, err := tpm2.NVReadEx(rwc, encryptionCertNVIndex, tpm2.HandleOwner, "", 0)
+		if err != nil {
+			glog.Errorf("ERROR:  could not get NVReadEx: %v", err)
+			return
+		}
+
+		encCert, err := x509.ParseCertificate(ekcertBytes)
+		if err != nil {
+			glog.Errorf("ERROR:   ParseCertificate: %v", err)
+			return
+		}
+		// https://pkg.go.dev/github.com/google/certificate-transparency-go/x509
+		glog.V(10).Infof("     Encryption Issuer x509 \n%v", encCert.Issuer)
+
+		glog.V(10).Infof("     Load SigningKey and Certifcate ")
+		kk, err := tpm2tools.EndorsementKeyFromNvIndex(rwc, signKeyNVIndex)
+		if err != nil {
+			glog.Errorf("ERROR:  could not get EndorsementKeyFromNvIndex: %v", err)
+			return
+		}
+		pubKey := kk.PublicKey().(*rsa.PublicKey)
+		akBytes, err := x509.MarshalPKIXPublicKey(pubKey)
+		if err != nil {
+			glog.Errorf("ERROR:  could not get MarshalPKIXPublicKey: %v", err)
+			return
+		}
+		akPubPEM := pem.EncodeToMemory(
+			&pem.Block{
+				Type:  "PUBLIC KEY",
+				Bytes: akBytes,
+			},
+		)
+		glog.V(10).Infof("     Signing PEM \n%s", string(akPubPEM))
+
+		// now reread the EKCert directly from NV
+		//   the EKCertificate (x509) is saved at signCertNVIndex
+		//   the following steps attemts to read that value in directly from NV
+		//   This is currently not supported but i'm adding in code anyway
+
+		kcertBytes, err := tpm2.NVReadEx(rwc, signCertNVIndex, tpm2.HandleOwner, emptyPassword, 0)
+		if err != nil {
+			glog.Errorf("ERROR:  could not get Signing NVReadEx: %v", err)
+			return
+		}
+
+		ct, err := x509.ParseCertificate(kcertBytes)
+		if err != nil {
+			glog.Errorf("ERROR:   ParseCertificate: %v", err)
+			return
+		}
+		es, err := certparser.NewEKCertificate(ct)
+		if err != nil {
+			glog.Errorf("ERROR:  could  MarshalPKIXPublicKey (signing): %v", err)
+			return
+		}
+		glog.V(10).Infof("VM InstanceID from EKCert Encryption: %s \n", es.GCEInstanceID())
+
+		spubKey := ct.PublicKey.(*rsa.PublicKey)
+
+		skBytes, err := x509.MarshalPKIXPublicKey(spubKey)
+		if err != nil {
+			glog.Errorf("ERROR:  could  MarshalPKIXPublicKey (signing): %v", err)
+			return
+		}
+		skPubPEM := pem.EncodeToMemory(
+			&pem.Block{
+				Type:  "PUBLIC KEY",
+				Bytes: skBytes,
+			},
+		)
+		glog.V(10).Infof("    Signing PEM Public \n%s", string(skPubPEM))
+	}
 	c := pb.NewVerifierClient(conn)
 
 	glog.V(5).Infof("=============== MakeCredential ===============")

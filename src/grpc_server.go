@@ -22,6 +22,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+
+	certparser "certparser"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
@@ -34,12 +36,12 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
-
 	"sync"
+	"time"
 	"verifier"
 
 	"github.com/golang/glog"
+
 	"golang.org/x/net/context"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/grpc"
@@ -332,20 +334,59 @@ func (s *server) MakeCredential(ctx context.Context, in *verifier.MakeCredential
 	glog.V(5).Infof("     From InstanceID %s", idToken.Google.ComputeEngine.InstanceID)
 
 	newCtx := context.Background()
-
-	computService, err := compute.NewService(newCtx)
+	computeService, err := compute.NewService(newCtx)
 	if err != nil {
 		return &verifier.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to Verify EK with GCP APIs %v", err))
 	}
 
-	req := computService.Instances.GetShieldedInstanceIdentity(idToken.Google.ComputeEngine.ProjectID, idToken.Google.ComputeEngine.Zone, idToken.Google.ComputeEngine.InstanceName)
-	r, err := req.Do()
+	//  First just try and read the EK Encryption Signing Cert and Keys
+	//  GKE VMs saves the EK Signing and Encryption certs to NV ram area and can be recalled via the api
+	ekKeys, err := computeService.Instances.GetShieldedInstanceIdentity(idToken.Google.ComputeEngine.ProjectID, idToken.Google.ComputeEngine.Zone, idToken.Google.ComputeEngine.InstanceName).Do()
 	if err != nil {
-		return &verifier.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to Recall Shielded Identity %v", err))
+		return &verifier.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Unable to find  Instance %v", err))
 	}
 
-	glog.V(10).Infof("     Acquired PublickKey from GCP API: \n%s", r.EncryptionKey.EkPub)
+	pubEKey := ekKeys.EncryptionKey.EkPub
+	pubECert := ekKeys.EncryptionKey.EkCert
+	pubSKey := ekKeys.SigningKey.EkPub
+	pubSCert := ekKeys.SigningKey.EkCert
 
+	if pubECert != "" {
+		block, _ := pem.Decode([]byte(pubECert))
+		if block == nil {
+			return &verifier.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("Failed to parse claims"))
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return &verifier.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("failed to parse certificate %v", err))
+		}
+		e, err := certparser.NewEKCertificate(cert)
+		if err != nil {
+			return &verifier.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("failed to get NewEKCertificate  %v", err))
+		}
+		glog.V(10).Infof("VM InstanceID from EKCert Encryption: %s \n", e.GCEInstanceID())
+
+	}
+	if pubSCert != "" {
+		block, _ := pem.Decode([]byte(pubSCert))
+		if block == nil {
+			panic("failed to parse certificate PEM")
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			panic("failed to parse certificate: " + err.Error())
+		}
+		glog.V(10).Infof("Signing certificate: %s \n", cert.Issuer)
+		e, err := certparser.NewEKCertificate(cert)
+		if err != nil {
+			panic(err)
+		}
+		glog.V(10).Infof("VM InstanceID from EKCert Signing: %s \n", e.GCEInstanceID())
+	}
+
+	glog.V(10).Infof("     Acquired PublickKey (encryption) from GCP API: \n%s", pubEKey)
+
+	glog.V(10).Infof("     Acquired PublickKey (signing) from GCP API: \n%s", pubSKey)
 	glog.V(10).Infof("     Decoding ekPub from client")
 	ekPub, err := tpm2.DecodePublic(in.EkPub)
 	if err != nil {
@@ -369,7 +410,7 @@ func (s *server) MakeCredential(ctx context.Context, in *verifier.MakeCredential
 	)
 	glog.V(10).Infof("     EKPubPEM: \n%v", string(ekPubPEM))
 
-	if string(ekPubPEM) != r.EncryptionKey.EkPub {
+	if string(ekPubPEM) != pubEKey {
 		return &verifier.MakeCredentialResponse{}, grpc.Errorf(codes.FailedPrecondition, fmt.Sprintf("EkPub mismatchKey"))
 	}
 
