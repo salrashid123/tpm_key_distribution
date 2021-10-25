@@ -16,6 +16,26 @@ There are two parts:
 The idea is the gRPC service acts like a broker to distribute secrets to clients VM only after they prove their integrity and state using the TPM.
 
 
+This repo uses some GCP specific ways to acquire the EK through its metaata server.  You certainly don't have to do that and can look for the `EK Cert` in `NV`  (which you an also do on GCP)
+
+This procedure makes the client system that has a TPM make an outbound API call to a server and offers to prove its TPM.
+
+The reverse of this procedure is here where the server contacts each device to ask it to prove itself (i,e push vs pull)
+
+* [TPM Remote Attestation protocol using go-tpm and gRPC](https://github.com/salrashid123/go_tpm_remote_attestation)
+
+Also maybe interested in
+
+* [AWS v4 Signer for embedding Access Secrets to PKCS11 and TPMs](https://github.com/salrashid123/aws_hmac)
+* [mTLS with TPM bound private key](https://github.com/salrashid123/go_tpm_https_embed)
+* [Sealing RSA and Symmetric keys with GCP vTPMs](https://github.com/salrashid123/gcp_tpm_sealed_keys)
+* [Trusted Platform Module (TPM) recipes with tpm2_tools and go-tpm](https://github.com/salrashid123/tpm2)
+* [PKCS 11 Samples in Go using SoftHSM](https://github.com/salrashid123/go_pkcs11)
+* [mTLS with PKCS11](https://github.com/salrashid123/mtls_pkcs11)
+* [GCS signedURLs and GCP Authentication with Trusted Platform Module](https://github.com/salrashid123/gcs_tpm)
+* [Google Cloud IoT Core Authentication with Trusted Platform Module (TPM)](https://github.com/salrashid123/iot_tpm_auth)
+* [TPM2-TSS-Engine hello world and Google Cloud Authentication](https://github.com/salrashid123/tpm2_evp_sign_decrypt)
+
 There are several sequences involved in this flow which uses the TPM:
 
 * Proof that a client owns a specific TPM [Remote Attestation](https://tpm2-software.github.io/tpm2-tss/getting-started/2019/12/18/Remote-Attestation.html)
