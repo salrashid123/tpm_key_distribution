@@ -46,7 +46,7 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/grpc"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt"
 	"github.com/lestrrat/go-jwx/jwk"
 	"google.golang.org/grpc/status"
 
