@@ -1,4 +1,4 @@
-# TPM based Secret Sharing with Google Compute Engine
+## TPM based Secret Sharing with Google Compute Engine
 
 Symmetric and Asymmetric Key Distribution server using [Trusted Platform Module](https://en.wikipedia.org/wiki/Trusted_Platform_Module).
 
@@ -165,8 +165,6 @@ Service Accounts:
 - `tpm-client` service account will not have any IAM permissions and will only provide the gRPC Server the instance identity document.
 
 - `tpm-server` service account will use the GCE API call to recall the clients public endorsement key
-
-gcloud beta compute --project=mineral-minutia-820 instances create instance-4 --zone=us-central1-a --machine-type=e2-medium --subnet=aet-uscentral1-myconn-sbnt --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=1071284184436-compute@developer.gserviceaccount.com --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=debian-10-buster-v20210609 --image-project=debian-cloud --boot-disk-size=10GB --boot-disk-type=pd-balanced --boot-disk-device-name=instance-4 --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --reservation-affinity=any
 
 ```bash
 $ gcloud compute  instances create client \
